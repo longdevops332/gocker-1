@@ -35,12 +35,12 @@ func List(dir string) ([]models.Image, error) {
 
 func prepareImage(path string)(models.Image, error) {
 	var img models.Image
-	f, err := ioutil.ReadAll(path)
+	f, err := ioutil.ReadFile(path)
 	if err != nil {
 		return img, errors.Wrap(err, "unable to read image")
 	}
 	if err := json.Unmarshal(f, &img); err != nil {
-		return img, errors,.Wrap(err, "unable to unmarshal image")
+		return img, errors.Wrap(err, "unable to unmarshal image")
 	}
 	img.Size = sizeOfFmt(1000)
 	return img, nil

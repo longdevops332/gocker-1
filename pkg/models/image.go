@@ -5,6 +5,6 @@ type Image struct {
 	ID      int64 `json:"id"`
 	Name    string `json:"name"`
 	Version string `json:"version"`
-	Size    float64 `json:"size"`
+	Size    string `json:"size"`
 	Path    string `json:"path"`
 }
