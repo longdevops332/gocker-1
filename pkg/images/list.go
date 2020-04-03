@@ -27,6 +27,7 @@ func List(dir string) ([]models.Image, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get prepared image")
 		}
+		img.Path = f.Name()
 
 	}
 	return images, nil
@@ -41,5 +42,6 @@ func prepareImage(path string)(models.Image, error) {
 	if err := json.Unmarshal(f, &img); err != nil {
 		return img, errors,.Wrap(err, "unable to unmarshal image")
 	}
+	img.Size = sizeOfFmt(1000)
 	return img, nil
 }
