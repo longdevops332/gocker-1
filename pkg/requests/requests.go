@@ -1,4 +1,4 @@
-package network
+package requests
 
 import (
 	"encoding/json"
