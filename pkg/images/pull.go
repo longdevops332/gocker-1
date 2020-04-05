@@ -1,7 +1,10 @@
 package images
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/saromanov/gocker/pkg/models"
@@ -37,6 +40,14 @@ func (p *Pull) Do() error {
 		return errors.Wrap(err, "unable to get token")
 	}
 	fmt.Println("TOKEN: ", token)
+
+	manifest, err := p.getManifest("lib", p.image, p.tag)
+	if err != nil {
+		return errors.Wrap(err, "unable to get manigest data")
+	}
+	if err := writeManifestFile(manifest); err != nil {
+		return errors.Wrap(err, "failed to write manifest file")
+	}
 	return nil
 }
 
@@ -61,4 +72,16 @@ func (p *Pull) getManifest(library, image, tag string) (*models.Manifest, error)
 		return nil, errors.Wrap(err, "unable to get manifest")
 	}
 	return m, nil
+}
+
+func writeManifestFile(m *models.Manifest) error {
+	imageName := strings.Replace(m.Name, "/", "_", -1)
+	data, err := json.Marshal(m)
+	if err != nil {
+		return errors.Wrap(err, "unable to marshal manifest")
+	}
+	if err := ioutil.WriteFile(imageName, data, 0664); err != nil {
+		return errors.Wrap(err, "unable to write to file")
+	}
+	return nil
 }
