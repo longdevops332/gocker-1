@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -48,6 +50,21 @@ func (p *Pull) Do() error {
 	if err := writeManifestFile(manifest); err != nil {
 		return errors.Wrap(err, "failed to write manifest file")
 	}
+	if layerPath, err := createSubDir("data", p.image, "layers"); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("unable to create layer dir: %s", layerPath))
+	}
+	contentsPath, err := createSubDir("data", p.image, "contents")
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("unable to create content dir: %s", contentsPath))
+	}
+	signs := getLayerSigns(manifest)
+	for sig := range signs {
+		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, "lib", p.image, p.tag, sig)
+		var resp map[string]interface{}
+		if err := requests.Get(url, &resp); err != nil {
+			return errors.Wrap(err, "unable to get content")
+		}
+	}
 	return nil
 }
 
@@ -84,4 +101,20 @@ func writeManifestFile(m *models.Manifest) error {
 		return errors.Wrap(err, "unable to write to file")
 	}
 	return nil
+}
+
+// createSunDir provides creating of directory for image layers
+func createSubDir(basePath, image, subDir string) (string, error) {
+	layersPath := path.Join(basePath, image)
+	layersPath = path.Join(layersPath, subDir)
+	return layersPath, os.MkdirAll(layersPath, os.ModePerm)
+}
+
+// getLayerSigns returns signatures of layers
+func getLayerSigns(m *models.Manifest) map[string]bool {
+	result := make(map[string]string)
+	for _, l := range m.Layers {
+		result[l.BlobSum] = true
+	}
+	return result
 }
