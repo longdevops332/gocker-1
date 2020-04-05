@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
+	"github.com/saromanov/gocker/pkg/images"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/saromanov/gocker/pkg/images"
 )
 
 // Build provides building of the arguments
@@ -32,6 +33,11 @@ func Build(args []string) {
 				Usage:  "list of images",
 				Action: list,
 			},
+			{
+				Name:   "pull",
+				Usage:  "pull of the image",
+				Action: pull,
+			},
 		},
 	}
 
@@ -54,6 +60,23 @@ func list(c *cli.Context) error {
 	}
 	for _, img := range images {
 		fmt.Println(img)
+	}
+	return nil
+}
+
+func pull(c *cli.Context) error {
+	err := func(ctx *cli.Context) error {
+		img := c.Args().Get(0)
+		if img == "" {
+			return errors.New("image name is not defined")
+		}
+		if err := images.NewPull(img).Do(); err != nil {
+			return errors.Wrap(err, "unable to pull image")
+		}
+		return nil
+	}(c)
+	if err != nil {
+		logrus.Fatalf("unable to apply pull of the image")
 	}
 	return nil
 }

@@ -58,7 +58,7 @@ func (p *Pull) getManifest(library, image, tag string) (*models.Manifest, error)
 	var m *models.Manifest
 	err := requests.Get(fmt.Sprintf("%s/%s/%s/manifests/%s", registryURL, library, image, tag), &m)
 	if err != nil {
-		return "", errors.Wrap(err, "unable to get manifest")
+		return nil, errors.Wrap(err, "unable to get manifest")
 	}
 	return m, nil
 }
