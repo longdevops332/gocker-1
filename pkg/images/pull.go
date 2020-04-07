@@ -36,6 +36,7 @@ func (p *Pull) WithTag(tag string) {
 }
 
 // Do starts operation of pulling
+// Its pull image by layer and store it on tar file
 func (p *Pull) Do() error {
 	token, err := p.getToken()
 	if err != nil {
