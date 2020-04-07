@@ -17,15 +17,20 @@ const registryURL = "https://registry-1.docker.io/v2"
 
 // Pull provides pulling of the images
 type Pull struct {
-	tag   string
-	image string
+	tag     string
+	image   string
+	library string
 }
 
 // NewPull provides initialization on the pulling
-func NewPull(image string) *Pull {
+func NewPull(image, library string) *Pull {
+	if library == "" {
+		library = "lib"
+	}
 	return &Pull{
-		image: image,
-		tag:   "latest",
+		image:   image,
+		tag:     "latest",
+		library: library,
 	}
 }
 
@@ -44,7 +49,7 @@ func (p *Pull) Do() error {
 	}
 	fmt.Println("TOKEN: ", token)
 
-	manifest, err := p.getManifest("lib", p.image, p.tag)
+	manifest, err := p.getManifest(p.library, p.image, p.tag)
 	if err != nil {
 		return errors.Wrap(err, "unable to get manigest data")
 	}
@@ -60,7 +65,7 @@ func (p *Pull) Do() error {
 	}
 	signs := getLayerSigns(manifest)
 	for sig := range signs {
-		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, "lib", p.image, p.tag, sig)
+		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, p.library, p.image, p.tag, sig)
 		var resp map[string]interface{}
 		if err := requests.Get(url, &resp); err != nil {
 			return errors.Wrap(err, "unable to get content")
@@ -113,7 +118,7 @@ func createSubDir(basePath, image, subDir string) (string, error) {
 
 // getLayerSigns returns signatures of layers
 func getLayerSigns(m *models.Manifest) map[string]bool {
-	result := make(map[string]string)
+	result := make(map[string]bool)
 	for _, l := range m.Layers {
 		result[l.BlobSum] = true
 	}
