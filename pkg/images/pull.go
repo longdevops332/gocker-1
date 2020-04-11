@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -23,15 +24,21 @@ type Pull struct {
 }
 
 // NewPull provides initialization on the pulling
-func NewPull(image, library string) *Pull {
-	if library == "" {
-		library = "lib"
-	}
+func NewPull(img string) *Pull {
+	library, image := splitInputImage(img)
 	return &Pull{
 		image:   image,
 		tag:     "latest",
 		library: library,
 	}
+}
+
+func splitInputImage(img string) (string, string) {
+	result := strings.Split(img, "/")
+	if len(result) == 1 {
+		return "library", result[0]
+	}
+	return result[0], result[1]
 }
 
 // WithTag provides adding of tags for image
@@ -47,9 +54,8 @@ func (p *Pull) Do() error {
 	if err != nil {
 		return errors.Wrap(err, "unable to get token")
 	}
-	fmt.Println("TOKEN: ", token)
 
-	manifest, err := p.getManifest(p.library, p.image, p.tag)
+	manifest, err := p.getManifest(token, p.library, p.image, p.tag)
 	if err != nil {
 		return errors.Wrap(err, "unable to get manigest data")
 	}
@@ -88,11 +94,20 @@ func (p *Pull) getToken() (string, error) {
 }
 
 // getManifest returns manifest of the image
-func (p *Pull) getManifest(library, image, tag string) (*models.Manifest, error) {
-	var m *models.Manifest
-	err := requests.Get(fmt.Sprintf("%s/%s/%s/manifests/%s", registryURL, library, image, tag), &m)
+func (p *Pull) getManifest(token, library, image, tag string) (*models.Manifest, error) {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s/manifests/%s", registryURL, library, image, tag), nil)
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get manifest")
+	}
+	var m *models.Manifest
+	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
+		return nil, errors.Wrap(err, "unable to decode response")
+	}
+	if m == nil {
+		return nil, errors.New("manifest file is empty")
 	}
 	return m, nil
 }
