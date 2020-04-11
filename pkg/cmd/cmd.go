@@ -70,13 +70,13 @@ func pull(c *cli.Context) error {
 		if img == "" {
 			return errors.New("image name is not defined")
 		}
-		if err := images.NewPull(img).Do(); err != nil {
+		if err := images.NewPull(img, "lib").Do(); err != nil {
 			return errors.Wrap(err, "unable to pull image")
 		}
 		return nil
 	}(c)
 	if err != nil {
-		logrus.Fatalf("unable to apply pull of the image")
+		logrus.Fatalf("unable to apply pull of the image: %v", err)
 	}
 	return nil
 }
