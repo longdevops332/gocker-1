@@ -76,6 +76,7 @@ func (p *Pull) Do() error {
 		if err := requests.Get(url, &resp); err != nil {
 			return errors.Wrap(err, "unable to get content")
 		}
+		print(resp)
 	}
 	return nil
 }
@@ -83,7 +84,8 @@ func (p *Pull) Do() error {
 // getToken return token for auth
 func (p *Pull) getToken() (string, error) {
 	var t *models.Auth
-	err := requests.Get(fmt.Sprintf("https://auth.docker.io/token?service=registry.docker.io&scope=repository:%s/%s:pull", "name", p.image), &t)
+	url := fmt.Sprintf("https://auth.docker.io/token?service=registry.docker.io&scope=repository:%s/%s:pull", p.library, p.image)
+	err := requests.Get(url, &t)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to get auth")
 	}
@@ -96,7 +98,8 @@ func (p *Pull) getToken() (string, error) {
 // getManifest returns manifest of the image
 func (p *Pull) getManifest(token, library, image, tag string) (*models.Manifest, error) {
 	client := &http.Client{}
-	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s/manifests/%s", registryURL, library, image, tag), nil)
+	url := fmt.Sprintf("%s/%s/%s/manifests/%s", registryURL, library, image, tag)
+	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 	res, err := client.Do(req)
 	if err != nil {
@@ -106,7 +109,7 @@ func (p *Pull) getManifest(token, library, image, tag string) (*models.Manifest,
 	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
 		return nil, errors.Wrap(err, "unable to decode response")
 	}
-	if m == nil {
+	if m == nil || len(m.Layers) == 0 {
 		return nil, errors.New("manifest file is empty")
 	}
 	return m, nil
