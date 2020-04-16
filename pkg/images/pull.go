@@ -69,14 +69,17 @@ func (p *Pull) Do() error {
 		return errors.Wrap(err, "failed to write manifest file")
 	}
 	signs := getLayerSigns(manifest)
+	if len(signs) == 0 {
+		return errors.New("layers signs is not defined")
+	}
 	for sig := range signs {
 		fmt.Printf("fetching the layer: %s\n", sig)
-		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, p.library, p.image, p.tag, sig)
+		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, p.library, p.image, sig)
 		var resp map[string]interface{}
-		if err := requests.Get(url, &resp); err != nil {
+		if err := requests.GetWithAuth(token, url, &resp); err != nil {
 			return errors.Wrap(err, "unable to get content")
 		}
-		print(resp)
+		fmt.Println(resp)
 	}
 	return nil
 }
