@@ -18,18 +18,20 @@ const registryURL = "https://registry-1.docker.io/v2"
 
 // Pull provides pulling of the images
 type Pull struct {
-	tag     string
-	image   string
-	library string
+	tag           string
+	image         string
+	library       string
+	baseDirectory string
 }
 
 // NewPull provides initialization on the pulling
 func NewPull(img string) *Pull {
 	library, image := splitInputImage(img)
 	return &Pull{
-		image:   image,
-		tag:     "latest",
-		library: library,
+		image:         image,
+		tag:           "latest",
+		library:       library,
+		baseDirectory: getBaseDirectory(),
 	}
 }
 
@@ -146,4 +148,14 @@ func getLayerSigns(m *models.Manifest) map[string]bool {
 		result[l.BlobSum] = true
 	}
 	return result
+}
+
+// getBaseDirectory returns main dir for store images
+// or returns default one
+func getBaseDirectory() string {
+	baseDir := os.Getenv("GOCKER_BASE_DIR")
+	if baseDir != "" {
+		return baseDir
+	}
+	return "gocker-images"
 }
