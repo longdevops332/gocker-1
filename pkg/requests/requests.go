@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/pkg/errors"
 )
@@ -16,8 +17,9 @@ func Get(url string, resp interface{}) error {
 	return get(client, req, resp)
 }
 
-// GetWithAuth provides sending of Get request with auth token
-func GetWithAuth(token, url string, resp interface{}) error {
+// StreamToFile provides sending of Get request with auth token
+// for get data for stream it to the file
+func StreamToFile(filePath, token, url string, resp interface{}) error {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
@@ -26,6 +28,11 @@ func GetWithAuth(token, url string, resp interface{}) error {
 		return errors.Wrap(err, "unable to get manifest")
 	}
 	defer res.Body.Close()
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return errors.Wrap(err, "unable to open file")
+	}
+	defer f.Close()
 	bytesRead := 0
 	buf := make([]byte, 1024*1024)
 	for {
@@ -38,7 +45,7 @@ func GetWithAuth(token, url string, resp interface{}) error {
 		if err != nil {
 			return errors.Wrap(err, "errors reading response")
 		}
-		fmt.Println("NN: ", n)
+		f.Write(buf)
 	}
 	return nil
 }

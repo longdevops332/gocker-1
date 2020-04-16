@@ -76,7 +76,8 @@ func (p *Pull) Do() error {
 		fmt.Printf("fetching the layer: %s\n", sig)
 		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, p.library, p.image, sig)
 		var resp map[string]interface{}
-		if err := requests.GetWithAuth(token, url, &resp); err != nil {
+		filePath := path.Join(p.baseDirectory, "layers")
+		if err := requests.StreamToFile(filePath, token, url, &resp); err != nil {
 			return errors.Wrap(err, "unable to get content")
 		}
 		fmt.Println(resp)
