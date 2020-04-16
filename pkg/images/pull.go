@@ -71,6 +71,7 @@ func (p *Pull) Do() error {
 	}
 	signs := getLayerSigns(manifest)
 	for sig := range signs {
+		fmt.Printf("fetching the layer: %s\n", sig)
 		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, p.library, p.image, p.tag, sig)
 		var resp map[string]interface{}
 		if err := requests.Get(url, &resp); err != nil {
@@ -115,7 +116,11 @@ func (p *Pull) getManifest(token, library, image, tag string) (*models.Manifest,
 	return m, nil
 }
 
+// writeManifestFile provides writing of manifest to the file
 func writeManifestFile(m *models.Manifest) error {
+	if m.Name == "" {
+		return errors.New("name of the image is not defined")
+	}
 	imageName := strings.Replace(m.Name, "/", "_", -1)
 	data, err := json.Marshal(m)
 	if err != nil {
