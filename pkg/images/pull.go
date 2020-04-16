@@ -27,11 +27,15 @@ type Pull struct {
 // NewPull provides initialization on the pulling
 func NewPull(img string) *Pull {
 	library, image := splitInputImage(img)
+	baseDir, err := createBaseDirectory()
+	if err != nil {
+		panic(err)
+	}
 	return &Pull{
 		image:         image,
 		tag:           "latest",
 		library:       library,
-		baseDirectory: getBaseDirectory(),
+		baseDirectory: baseDir,
 	}
 }
 
@@ -61,15 +65,8 @@ func (p *Pull) Do() error {
 	if err != nil {
 		return errors.Wrap(err, "unable to get manigest data")
 	}
-	if err := writeManifestFile(manifest); err != nil {
+	if err := preparePulling(p.baseDirectory, manifest); err != nil {
 		return errors.Wrap(err, "failed to write manifest file")
-	}
-	if layerPath, err := createSubDir("data", p.image, "layers"); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("unable to create layer dir: %s", layerPath))
-	}
-	contentsPath, err := createSubDir("data", p.image, "contents")
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("unable to create content dir: %s", contentsPath))
 	}
 	signs := getLayerSigns(manifest)
 	for sig := range signs {
@@ -118,19 +115,30 @@ func (p *Pull) getManifest(token, library, image, tag string) (*models.Manifest,
 	return m, nil
 }
 
-// writeManifestFile provides writing of manifest to the file
-func writeManifestFile(m *models.Manifest) error {
+// preparePulling provides writing of manifest to the file
+// also, its creating supported directories if this is not exists
+func preparePulling(baseDir string, m *models.Manifest) error {
 	if m.Name == "" {
 		return errors.New("name of the image is not defined")
 	}
 	imageName := strings.Replace(m.Name, "/", "_", -1)
+	pathDir := path.Join(baseDir, fmt.Sprintf("%s.json", imageName))
 	data, err := json.Marshal(m)
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal manifest")
 	}
-	if err := ioutil.WriteFile(imageName, data, 0664); err != nil {
+	if err := ioutil.WriteFile(pathDir, data, 0664); err != nil {
 		return errors.Wrap(err, "unable to write to file")
 	}
+
+	if layerPath, err := createSubDir(baseDir, imageName, "layers"); err != nil {
+		return errors.Wrap(err, fmt.Sprintf("unable to create layer dir: %s", layerPath))
+	}
+	contentsPath, err := createSubDir(baseDir, imageName, "layers/contents")
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("unable to create content dir: %s", contentsPath))
+	}
+
 	return nil
 }
 
@@ -138,6 +146,9 @@ func writeManifestFile(m *models.Manifest) error {
 func createSubDir(basePath, image, subDir string) (string, error) {
 	layersPath := path.Join(basePath, image)
 	layersPath = path.Join(layersPath, subDir)
+	if _, err := os.Stat(layersPath); !os.IsNotExist(err) {
+		return layersPath, nil
+	}
 	return layersPath, os.MkdirAll(layersPath, os.ModePerm)
 }
 
@@ -150,12 +161,19 @@ func getLayerSigns(m *models.Manifest) map[string]bool {
 	return result
 }
 
-// getBaseDirectory returns main dir for store images
+// createBaseDirectory returns main dir for store images
 // or returns default one
-func getBaseDirectory() string {
+// its create base dir if this is not exists
+func createBaseDirectory() (string, error) {
 	baseDir := os.Getenv("GOCKER_BASE_DIR")
-	if baseDir != "" {
-		return baseDir
+	if baseDir == "" {
+		baseDir = "gocker-images"
 	}
-	return "gocker-images"
+	if _, err := os.Stat(baseDir); !os.IsNotExist(err) {
+		return baseDir, nil
+	}
+	if err := os.Mkdir(baseDir, os.ModePerm); err != nil {
+		return "", errors.Wrap(err, fmt.Sprintf("unable to create base dir: %s", baseDir))
+	}
+	return baseDir, nil
 }
