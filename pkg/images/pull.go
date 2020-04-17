@@ -65,7 +65,8 @@ func (p *Pull) Do() error {
 	if err != nil {
 		return errors.Wrap(err, "unable to get manigest data")
 	}
-	if err := preparePulling(p.baseDirectory, manifest); err != nil {
+	imageName := strings.Replace(manifest.Name, "/", "_", -1)
+	if err := preparePulling(p.baseDirectory, imageName, manifest); err != nil {
 		return errors.Wrap(err, "failed to write manifest file")
 	}
 	signs := getLayerSigns(manifest)
@@ -75,12 +76,10 @@ func (p *Pull) Do() error {
 	for sig := range signs {
 		fmt.Printf("fetching the layer: %s\n", sig)
 		url := fmt.Sprintf("%s/%s/%s/blobs/%s", registryURL, p.library, p.image, sig)
-		var resp map[string]interface{}
-		filePath := path.Join(p.baseDirectory, "layers")
-		if err := requests.StreamToFile(filePath, token, url, &resp); err != nil {
+		filePath := path.Join(path.Join(path.Join(p.baseDirectory, imageName), "layers"), fmt.Sprintf("%s.tar", sig))
+		if err := requests.StreamToFile(filePath, token, url); err != nil {
 			return errors.Wrap(err, "unable to get content")
 		}
-		fmt.Println(resp)
 	}
 	return nil
 }
@@ -121,11 +120,10 @@ func (p *Pull) getManifest(token, library, image, tag string) (*models.Manifest,
 
 // preparePulling provides writing of manifest to the file
 // also, its creating supported directories if this is not exists
-func preparePulling(baseDir string, m *models.Manifest) error {
+func preparePulling(baseDir, imageName string, m *models.Manifest) error {
 	if m.Name == "" {
 		return errors.New("name of the image is not defined")
 	}
-	imageName := strings.Replace(m.Name, "/", "_", -1)
 	pathDir := path.Join(baseDir, fmt.Sprintf("%s.json", imageName))
 	data, err := json.Marshal(m)
 	if err != nil {
