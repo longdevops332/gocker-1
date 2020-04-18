@@ -10,10 +10,11 @@ import (
 )
 
 // List returns list of images
-func List(dir string) ([]models.Image, error) {
-	files, err := ioutil.ReadDir(dir)
+func List() ([]models.Image, error) {
+	baseDir := getBaseDirectory()
+	files, err := ioutil.ReadDir(baseDir)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("unable to read dir: %s", dir))
+		return nil, errors.Wrap(err, fmt.Sprintf("unable to read dir: %s", baseDir))
 	}
 	images := []models.Image{}
 	for _, f := range files {

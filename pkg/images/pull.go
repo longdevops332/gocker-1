@@ -167,10 +167,7 @@ func getLayerSigns(m *models.Manifest) map[string]bool {
 // or returns default one
 // its create base dir if this is not exists
 func createBaseDirectory() (string, error) {
-	baseDir := os.Getenv("GOCKER_BASE_DIR")
-	if baseDir == "" {
-		baseDir = "gocker-images"
-	}
+	baseDir := getBaseDirectory()
 	if _, err := os.Stat(baseDir); !os.IsNotExist(err) {
 		return baseDir, nil
 	}
@@ -178,4 +175,13 @@ func createBaseDirectory() (string, error) {
 		return "", errors.Wrap(err, fmt.Sprintf("unable to create base dir: %s", baseDir))
 	}
 	return baseDir, nil
+}
+
+// getBaseDirectory retruns base directory for images
+func getBaseDirectory() string {
+	baseDir := os.Getenv("GOCKER_BASE_DIR")
+	if baseDir == "" {
+		baseDir = "gocker-images"
+	}
+	return baseDir
 }

@@ -53,7 +53,7 @@ func run(c *cli.Context) error {
 }
 
 func list(c *cli.Context) error {
-	images, err := images.List("./images")
+	images, err := images.List()
 	if err != nil {
 		logrus.Fatalf("unable to get list of images: %v", err)
 		return err
