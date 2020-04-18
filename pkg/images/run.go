@@ -5,7 +5,9 @@ import (
 	"os"
 
 	"github.com/containerd/cgroups"
+	"github.com/google/uuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 )
 
 // Run defines struct for running container
@@ -23,6 +25,9 @@ func NewRun(name string) (*Run, error) {
 
 // Do provides starting of container
 func (r *Run) Do() error {
+	id := genID()
+	name := fmt.Sprintf("c_%s", id)
+	logrus.Infof("Prepare to start container with id %s", name)
 	shares := uint64(100)
 	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath("/test"), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
@@ -34,4 +39,9 @@ func (r *Run) Do() error {
 	}
 	defer control.Delete()
 	return nil
+}
+
+// genID provides generation of unique id
+func genID() string {
+	return uuid.New().String()
 }
