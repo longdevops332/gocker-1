@@ -8,7 +8,7 @@ func sizeOfFmt(num float64) string {
 	step := 1024.0
 	for _, f := range formats {
 		if num < step {
-			return fmt.Sprintf("%f%dB", num, f)
+			return fmt.Sprintf("%f%sB", num, f)
 		}
 		step /= 1024
 	}

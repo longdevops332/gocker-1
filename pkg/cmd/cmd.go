@@ -49,13 +49,24 @@ func Build(args []string) {
 
 // run provides running of the app
 func run(c *cli.Context) error {
+	img := c.Args().Get(0)
+	if img == "" {
+		return errors.New("name of the image is not defined")
+	}
+	r, err := images.NewRun(img)
+	if err != nil {
+		logrus.WithError(err).WithField("image", img).Fatalf("unable to prepare to run image")
+	}
+	if err := r.Do(); err != nil {
+		logrus.WithError(err).WithField("image", img).Fatalf("unable to run image")
+	}
 	return nil
 }
 
 func list(c *cli.Context) error {
 	images, err := images.List()
 	if err != nil {
-		logrus.Fatalf("unable to get list of images: %v", err)
+		logrus.WithError(err).Fatalf("unable to get list of images")
 		return err
 	}
 	for _, img := range images {
