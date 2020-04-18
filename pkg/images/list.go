@@ -1,6 +1,8 @@
 package images
 
 import (
+	"path"
+	"os"
 	"encoding/json"
 	"strings"
 	"fmt"
@@ -12,6 +14,9 @@ import (
 // List returns list of images
 func List() ([]models.Image, error) {
 	baseDir := getBaseDirectory()
+	if _,err := os.Stat(baseDir); err != nil {
+		return nil, errors.Wrap(err, "unable to get base directory image")
+	}
 	files, err := ioutil.ReadDir(baseDir)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to read dir: %s", baseDir))
@@ -24,11 +29,12 @@ func List() ([]models.Image, error) {
 		if !strings.HasSuffix(f.Name(), ".json") {
 			continue
 		}
-		img, err := prepareImage(f.Name())
+		img, err := prepareImage(path.Join(baseDir, f.Name()))
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get prepared image")
 		}
 		img.Path = f.Name()
+		images = append(images, img)
 
 	}
 	return images, nil
