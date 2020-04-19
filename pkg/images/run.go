@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 )
 
 // Run defines struct for running container
@@ -44,4 +45,18 @@ func (r *Run) Do() error {
 // genID provides generation of unique id
 func genID() string {
 	return uuid.New().String()
+}
+
+// createNetwork provides creating of the new network on container
+func createNetwork(name, networkName string) error {
+	la := netlink.NewLinkAttrs()
+	la.Name = name
+	mybridge := &netlink.Bridge{LinkAttrs: la}
+	err := netlink.LinkAdd(mybridge)
+	if err != nil {
+		return fmt.Errorf("unable to add link: %s %v", name, err)
+	}
+	eth1, _ := netlink.LinkByName(networkName)
+	netlink.LinkSetMaster(eth1, mybridge)
+	return nil
 }
