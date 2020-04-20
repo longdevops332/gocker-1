@@ -17,9 +17,9 @@ func Build(args []string) {
 		Usage: "Tiny implementation of docker",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "project",
-				Value: "bin",
-				Usage: "type of the project. It might be bin or lib",
+				Name:  "device",
+				Value: "eth0",
+				Usage: "network device",
 			},
 		},
 		Commands: []*cli.Command{
@@ -53,7 +53,8 @@ func run(c *cli.Context) error {
 	if img == "" {
 		return errors.New("name of the image is not defined")
 	}
-	r, err := images.NewRun(img)
+	device := c.String("device")
+	r, err := images.NewRun(img, device)
 	if err != nil {
 		logrus.WithError(err).WithField("image", img).Fatalf("unable to prepare to run image")
 	}

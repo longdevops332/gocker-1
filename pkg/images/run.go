@@ -13,17 +13,18 @@ import (
 
 // Run defines struct for running container
 type Run struct {
-	imageName string
+	imageName, deviceName string
 }
 
 // NewRun provides starting of the new container
-func NewRun(name string) (*Run, error) {
+func NewRun(name, deviceName string) (*Run, error) {
 	baseDir := os.Getenv("GOCKER_BASE_DIR")
 	if baseDir == "" {
 		baseDir = "gocker-images"
 	}
 	return &Run{
-		imageName: name,
+		imageName:  name,
+		deviceName: deviceName,
 	}, nil
 }
 
@@ -42,7 +43,7 @@ func (r *Run) Do() error {
 		return fmt.Errorf("unable to create cgroup: %v", err)
 	}
 
-	if err := createNetwork(r.imageName, "eth1"); err != nil {
+	if err := createNetwork(r.imageName, r.deviceName); err != nil {
 		return fmt.Errorf("unable to create network: %v", err)
 	}
 	defer control.Delete()
@@ -63,7 +64,10 @@ func createNetwork(name, networkName string) error {
 	if err != nil {
 		return fmt.Errorf("unable to add link: %s %v", name, err)
 	}
-	eth1, _ := netlink.LinkByName(networkName)
+	eth1, err := netlink.LinkByName(networkName)
+	if err != nil {
+		return fmt.Errorf("failed to define netork: %v", err)
+	}
 	netlink.LinkSetMaster(eth1, mybridge)
 	return nil
 }
