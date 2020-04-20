@@ -31,14 +31,22 @@ func NewRun(name, deviceName string) (*Run, error) {
 // Do provides starting of container
 func (r *Run) Do() error {
 	id := genID()
+	fmt.Println(r.deviceName)
 	name := fmt.Sprintf("c_%s", id)
 	logrus.Infof("Prepare to start container with id %s", name)
+	path := fmt.Sprintf("gocker/%s", r.imageName)
 	shares := uint64(100)
-	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(r.imageName), &specs.LinuxResources{
+	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(path), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
 			Shares: &shares,
 		},
 	})
+	if err := control.Add(cgroups.Process{
+		Pid: os.Getpid(),
+	}); err != nil {
+		return fmt.Errorf("unable to add process to cgroup: %v", err)
+	}
+	defer control.Delete()
 	if err != nil {
 		return fmt.Errorf("unable to create cgroup: %v", err)
 	}
@@ -46,7 +54,6 @@ func (r *Run) Do() error {
 	if err := createNetwork(r.imageName, r.deviceName); err != nil {
 		return fmt.Errorf("unable to create network: %v", err)
 	}
-	defer control.Delete()
 	return nil
 }
 
