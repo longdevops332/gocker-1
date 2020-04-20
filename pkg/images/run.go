@@ -13,6 +13,7 @@ import (
 
 // Run defines struct for running container
 type Run struct {
+	imageName string
 }
 
 // NewRun provides starting of the new container
@@ -21,7 +22,9 @@ func NewRun(name string) (*Run, error) {
 	if baseDir == "" {
 		baseDir = "gocker-images"
 	}
-	return &Run{}, nil
+	return &Run{
+		imageName: name,
+	}, nil
 }
 
 // Do provides starting of container
@@ -30,13 +33,17 @@ func (r *Run) Do() error {
 	name := fmt.Sprintf("c_%s", id)
 	logrus.Infof("Prepare to start container with id %s", name)
 	shares := uint64(100)
-	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath("/test"), &specs.LinuxResources{
+	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(r.imageName), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
 			Shares: &shares,
 		},
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create cgroup: %v", err)
+	}
+
+	if err := createNetwork(r.imageName, "eth1"); err != nil {
+		return fmt.Errorf("unable to create network: %v", err)
 	}
 	defer control.Delete()
 	return nil
