@@ -3,6 +3,7 @@ package images
 import (
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/containerd/cgroups"
 	"github.com/google/uuid"
@@ -34,22 +35,32 @@ func (r *Run) Do() error {
 	fmt.Println(r.deviceName)
 	name := fmt.Sprintf("c_%s", id)
 	logrus.Infof("Prepare to start container with id %s", name)
-	path := fmt.Sprintf("gocker/%s", r.imageName)
+	path := fmt.Sprintf("gocker-images/%s", r.imageName)
 	shares := uint64(100)
 	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(path), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
 			Shares: &shares,
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("unable to create cgroup: %v", err)
+	}
+	defer control.Delete()
+
 	if err := control.Add(cgroups.Process{
 		Pid: os.Getpid(),
 	}); err != nil {
 		return fmt.Errorf("unable to add process to cgroup: %v", err)
 	}
-	defer control.Delete()
+	chExit, err := chroot(path)
 	if err != nil {
-		return fmt.Errorf("unable to create cgroup: %v", err)
+		return fmt.Errorf("unable to make chroot of dir %s: %v", path, err)
 	}
+	defer func() {
+		if err := chExit(); err != nil {
+			panic(err)
+		}
+	}()
 
 	if err := createNetwork(r.imageName, r.deviceName); err != nil {
 		return fmt.Errorf("unable to create network: %v", err)
@@ -73,8 +84,29 @@ func createNetwork(name, networkName string) error {
 	}
 	eth1, err := netlink.LinkByName(networkName)
 	if err != nil {
-		return fmt.Errorf("failed to define netork: %v", err)
+		return fmt.Errorf("failed to define network: %v", err)
 	}
 	netlink.LinkSetMaster(eth1, mybridge)
 	return nil
+}
+
+// chroot provides setting chroot of teh dir
+func chroot(path string) (func() error, error) {
+	root, err := os.Open("/")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := syscall.Chroot(path); err != nil {
+		root.Close()
+		return nil, err
+	}
+
+	return func() error {
+		defer root.Close()
+		if err := root.Chdir(); err != nil {
+			return err
+		}
+		return syscall.Chroot(".")
+	}, nil
 }
