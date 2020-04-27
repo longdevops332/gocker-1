@@ -3,6 +3,7 @@ package images
 import (
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/containerd/cgroups"
@@ -14,7 +15,7 @@ import (
 
 // Run defines struct for running container
 type Run struct {
-	imageName, deviceName string
+	imageName, deviceName, baseDir string
 }
 
 // NewRun provides starting of the new container
@@ -26,6 +27,7 @@ func NewRun(name, deviceName string) (*Run, error) {
 	return &Run{
 		imageName:  name,
 		deviceName: deviceName,
+		baseDir:    baseDir,
 	}, nil
 }
 
@@ -35,7 +37,7 @@ func (r *Run) Do() error {
 	fmt.Println(r.deviceName)
 	name := fmt.Sprintf("c_%s", id)
 	logrus.Infof("Prepare to start container with id %s", name)
-	path := fmt.Sprintf("gocker-images/%s", r.imageName)
+	path := r.prepareImagePath(r.imageName)
 	shares := uint64(100)
 	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(path), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
@@ -66,6 +68,17 @@ func (r *Run) Do() error {
 		return fmt.Errorf("unable to create network: %v", err)
 	}
 	return nil
+}
+
+func (r *Run) prepareImagePath(name string) string {
+	if !strings.Contains(name, "/") {
+		return fmt.Sprintf("%s/library_%s", r.baseDir, name)
+	}
+	splitting := strings.Split(name, "/")
+	if len(splitting) <= 1 {
+		return fmt.Sprintf("library")
+	}
+	return fmt.Sprintf("%s/%s_%s", r.baseDir, splitting[0], splitting[1])
 }
 
 // genID provides generation of unique id
