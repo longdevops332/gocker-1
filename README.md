@@ -1,4 +1,5 @@
 # gocker
+[![Go Report Card](https://goreportcard.com/badge/github.com/saromanov/gocker)](https://goreportcard.com/report/github.com/saromanov/gocker)
 
 Tiny implementation of Docker
 
