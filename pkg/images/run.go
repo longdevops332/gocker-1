@@ -51,6 +51,10 @@ func (r *Run) Do() error {
 	}
 	fmt.Println(state)
 	shares := uint64(100)
+	return r.run(path, shares)
+}
+
+func (r *Run) run(path string, shares uint64) error {
 	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(path), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
 			Shares: &shares,
