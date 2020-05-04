@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 	"syscall"
 
@@ -62,6 +63,7 @@ func (r *Run) Do() error {
 		path:       path,
 		shares:     shares,
 		workingDir: state.Config.WorkingDir,
+		cmd:        strings.Join(state.Config.Cmd, " "),
 	})
 }
 
@@ -83,7 +85,7 @@ func (r *Run) run(req request) error {
 	}
 	chExit, err := chroot(req.path)
 	if err != nil {
-		return fmt.Errorf("unable to make chroot of dir %s: %v", path, err)
+		return fmt.Errorf("unable to make chroot of dir %s: %v", req.path, err)
 	}
 	defer func() {
 		if err := chExit(); err != nil {
@@ -94,7 +96,8 @@ func (r *Run) run(req request) error {
 	if err := createNetwork(r.imageName, r.deviceName); err != nil {
 		return fmt.Errorf("unable to create network: %v", err)
 	}
-	return nil
+
+	return execCmd(req.path, req.cmd)
 }
 
 func (r *Run) prepareImagePath(name string) string {
@@ -170,4 +173,20 @@ func manifestHistoryToJSON(s string) (*models.V1Compatibility, error) {
 		return nil, fmt.Errorf("unable to unmarshal config: %v", err)
 	}
 	return conf, nil
+}
+
+func execCmd(path, cmdPath string) error {
+	p, err := exec.LookPath(cmdPath)
+	if err != nil {
+		return fmt.Errorf("unable to apply LookPath: %s %v", cmdPath, err)
+	}
+	cmdGoVer := &exec.Cmd{
+		Path:   p,
+		Stdout: os.Stdout,
+		Stderr: os.Stdout,
+	}
+	if err := cmdGoVer.Run(); err != nil {
+		return fmt.Errorf("unable to execute command: %v", err)
+	}
+	return nil
 }
