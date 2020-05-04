@@ -16,6 +16,14 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// request defines helpful struct for running container
+type request struct {
+	workingDir string
+	cmd        string
+	path       string
+	shares     uint64
+}
+
 // Run defines struct for running container
 type Run struct {
 	imageName, deviceName, baseDir string
@@ -49,15 +57,18 @@ func (r *Run) Do() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(state)
 	shares := uint64(100)
-	return r.run(path, shares)
+	return r.run(request{
+		path:       path,
+		shares:     shares,
+		workingDir: state.Config.WorkingDir,
+	})
 }
 
-func (r *Run) run(path string, shares uint64) error {
-	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(path), &specs.LinuxResources{
+func (r *Run) run(req request) error {
+	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(req.path), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
-			Shares: &shares,
+			Shares: &req.shares,
 		},
 	})
 	if err != nil {
@@ -70,7 +81,7 @@ func (r *Run) run(path string, shares uint64) error {
 	}); err != nil {
 		return fmt.Errorf("unable to add process to cgroup: %v", err)
 	}
-	chExit, err := chroot(path)
+	chExit, err := chroot(req.path)
 	if err != nil {
 		return fmt.Errorf("unable to make chroot of dir %s: %v", path, err)
 	}
