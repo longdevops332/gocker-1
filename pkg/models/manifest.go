@@ -22,7 +22,7 @@ type History struct {
 type V1Compatibility struct {
 	ID              string    `json:"id"`
 	Created         time.Time `json:"created"`
-	ContainerConfig Config    `json:"container_config"`
+	ContainerConfig Config    `json:"config"`
 }
 
 // Config defines configuration for containwe
@@ -30,7 +30,7 @@ type Config struct {
 	Hostname string   `json:"Hostname"`
 	Memory   int64    `json:"Memory"`
 	Env      []string `json:"Env"`
-	Cmd      string   `json:"Cmd"`
+	Cmd      []string `json:"Cmd"`
 }
 
 // Layer defines representation of layer

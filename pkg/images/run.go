@@ -45,7 +45,11 @@ func (r *Run) Do() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(manifest)
+	state, err := manifestHistoryToJSON(manifest.History[0].V1Compatibility)
+	if err != nil {
+		return err
+	}
+	fmt.Println(state)
 	shares := uint64(100)
 	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(path), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
@@ -143,4 +147,12 @@ func loadManifest(path string) (*models.Manifest, error) {
 		return nil, fmt.Errorf("unable to unmarshal manifest file: %v", err)
 	}
 	return m, nil
+}
+
+func manifestHistoryToJSON(s string) (*models.V1Compatibility, error) {
+	conf := &models.V1Compatibility{}
+	if err := json.Unmarshal([]byte(s), &conf); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal config: %v", err)
+	}
+	return conf, nil
 }
