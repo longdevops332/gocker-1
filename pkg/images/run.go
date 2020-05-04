@@ -41,6 +41,11 @@ func (r *Run) Do() error {
 	name := fmt.Sprintf("c_%s", id)
 	logrus.Infof("Prepare to start container with id %s", name)
 	path := r.prepareImagePath(r.imageName)
+	manifest, err := loadManifest(fmt.Sprintf("%s.json", path))
+	if err != nil {
+		return err
+	}
+	fmt.Println(manifest)
 	shares := uint64(100)
 	control, err := cgroups.New(cgroups.V1, cgroups.StaticPath(path), &specs.LinuxResources{
 		CPU: &specs.LinuxCPU{
