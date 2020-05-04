@@ -1,7 +1,9 @@
 package images
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"syscall"
@@ -9,6 +11,7 @@ import (
 	"github.com/containerd/cgroups"
 	"github.com/google/uuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/saromanov/gocker/pkg/models"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -122,4 +125,17 @@ func chroot(path string) (func() error, error) {
 		}
 		return syscall.Chroot(".")
 	}, nil
+}
+
+// loading of the manifest for running image
+func loadManifest(path string) (*models.Manifest, error) {
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load manifest file: %s %v", path, err)
+	}
+	m := &models.Manifest{}
+	if err := json.Unmarshal([]byte(file), &m); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal manifest file: %v", err)
+	}
+	return m, nil
 }
