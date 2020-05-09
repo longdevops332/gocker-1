@@ -73,13 +73,15 @@ func (r *Run) run(req request) error {
 			Shares: &req.shares,
 		},
 	})
+
 	if err != nil {
 		return fmt.Errorf("unable to create cgroup: %v", err)
 	}
 	defer control.Delete()
 
 	if err := control.Add(cgroups.Process{
-		Pid: os.Getpid(),
+		Pid:  os.Getpid(),
+		Path: req.path,
 	}); err != nil {
 		return fmt.Errorf("unable to add process to cgroup: %v", err)
 	}
@@ -87,7 +89,11 @@ func (r *Run) run(req request) error {
 	if err != nil {
 		return fmt.Errorf("unable to make chroot of dir %s: %v", req.path, err)
 	}
-	os.Chdir(req.workingDir)
+	if req.workingDir != "" {
+		if err := os.Chdir(req.workingDir); err != nil {
+			return fmt.Errorf("unable to chdir: %s %v", req.workingDir, err)
+		}
+	}
 	defer func() {
 		if err := chExit(); err != nil {
 			panic(err)
