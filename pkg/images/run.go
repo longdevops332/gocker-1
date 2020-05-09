@@ -87,17 +87,18 @@ func (r *Run) run(req request) error {
 	if err != nil {
 		return fmt.Errorf("unable to make chroot of dir %s: %v", req.path, err)
 	}
+	os.Chdir(req.workingDir)
 	defer func() {
 		if err := chExit(); err != nil {
 			panic(err)
 		}
 	}()
 
-	if err := createNetwork(r.imageName, r.deviceName); err != nil {
+	/*if err := createNetwork(r.imageName, r.deviceName); err != nil {
 		return fmt.Errorf("unable to create network: %v", err)
-	}
+	}*/
 
-	return execCmd(req.path, req.cmd)
+	return execCmd(req.workingDir, req.cmd)
 }
 
 func (r *Run) prepareImagePath(name string) string {
@@ -176,12 +177,9 @@ func manifestHistoryToJSON(s string) (*models.V1Compatibility, error) {
 }
 
 func execCmd(path, cmdPath string) error {
-	p, err := exec.LookPath(cmdPath)
-	if err != nil {
-		return fmt.Errorf("unable to apply LookPath: %s %v", cmdPath, err)
-	}
+	fmt.Println(cmdPath)
 	cmdGoVer := &exec.Cmd{
-		Path:   p,
+		Path:   cmdPath,
 		Stdout: os.Stdout,
 		Stderr: os.Stdout,
 	}
