@@ -183,7 +183,11 @@ func manifestHistoryToJSON(s string) (*models.V1Compatibility, error) {
 }
 
 func execCmd(path, cmdPath string) error {
-	cmd := exec.Command(cmdPath)
+	command := strings.Split(cmdPath, " ")
+	if len(command) == 0 {
+		return fmt.Errorf("command is not found")
+	}
+	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Dir = path
 
 	if err := cmd.Start(); err != nil {
