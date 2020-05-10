@@ -183,14 +183,15 @@ func manifestHistoryToJSON(s string) (*models.V1Compatibility, error) {
 }
 
 func execCmd(path, cmdPath string) error {
-	fmt.Println(cmdPath)
-	cmdGoVer := &exec.Cmd{
-		Path:   cmdPath,
-		Stdout: os.Stdout,
-		Stderr: os.Stdout,
+	cmd := exec.Command(cmdPath)
+	cmd.Dir = path
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start cmd: %v", err)
 	}
-	if err := cmdGoVer.Run(); err != nil {
-		return fmt.Errorf("unable to execute command: %v", err)
+
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("command returned error: %v", err)
 	}
 	return nil
 }
